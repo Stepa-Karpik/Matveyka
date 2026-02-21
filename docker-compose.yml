@@ -1,0 +1,9 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: matvey-app
+    ports:
+      - "3001:3000"
+    restart: unless-stopped
