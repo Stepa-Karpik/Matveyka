@@ -117,7 +117,6 @@ export function IntroOverlay({
 
             <div className="absolute inset-0 bg-black/55" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_5%,rgba(0,0,0,0.5)_75%)]" />
-            <div className="absolute inset-0 opacity-15 [background-image:radial-gradient(rgba(255,255,255,0.08)_0.7px,transparent_0.7px)] [background-size:4px_4px]" />
           </div>
 
           <button

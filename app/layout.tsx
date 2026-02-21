@@ -33,7 +33,6 @@ export default function RootLayout({
     <html lang="ru" className={`${_inter.variable} ${_playfair.variable}`}>
       <body className="font-sans antialiased bg-background text-foreground overflow-x-hidden">
         {children}
-        <div className="film-grain" aria-hidden="true" />
       </body>
     </html>
   )
