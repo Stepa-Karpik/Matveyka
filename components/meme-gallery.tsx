@@ -1,34 +1,64 @@
-"use client"
+﻿"use client"
 
-import { useRef, useState, useCallback } from "react"
+import { useCallback, useEffect, useMemo, useRef } from "react"
 import { motion } from "framer-motion"
-import { ChevronLeft, ChevronRight } from "lucide-react"
 import { SectionWrapper } from "./section-wrapper"
 import { AssetImage } from "./asset-image"
 import { memeData } from "@/lib/site-data"
 
-export function MemeGallery() {
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(true)
+const AUTO_SCROLL_PX_PER_SEC = 44
 
-  const updateScrollState = useCallback(() => {
-    const el = scrollRef.current
+export function MemeGallery() {
+  const viewportRef = useRef<HTMLDivElement>(null)
+  const animationRef = useRef<number | null>(null)
+  const lastTimeRef = useRef<number | null>(null)
+  const pausedRef = useRef(false)
+
+  const loopedMemes = useMemo(() => [...memeData.memes, ...memeData.memes], [])
+
+  const normalizePosition = useCallback(() => {
+    const el = viewportRef.current
     if (!el) return
-    setCanScrollLeft(el.scrollLeft > 10)
-    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10)
+
+    const half = el.scrollWidth / 2
+    if (half <= 0) return
+
+    if (el.scrollLeft >= half) {
+      el.scrollLeft -= half
+    }
+
+    if (el.scrollLeft < 0) {
+      el.scrollLeft += half
+    }
   }, [])
 
-  const scroll = useCallback(
-    (dir: "left" | "right") => {
-      const el = scrollRef.current
-      if (!el) return
-      const amount = el.clientWidth * 0.7
-      el.scrollBy({ left: dir === "left" ? -amount : amount, behavior: "smooth" })
-      setTimeout(updateScrollState, 400)
-    },
-    [updateScrollState]
-  )
+  useEffect(() => {
+    const tick = (timestamp: number) => {
+      const el = viewportRef.current
+      if (lastTimeRef.current == null) {
+        lastTimeRef.current = timestamp
+      }
+
+      const deltaMs = timestamp - lastTimeRef.current
+      lastTimeRef.current = timestamp
+
+      if (el && !pausedRef.current) {
+        const deltaPx = (deltaMs / 1000) * AUTO_SCROLL_PX_PER_SEC
+        el.scrollLeft += deltaPx
+        normalizePosition()
+      }
+      animationRef.current = requestAnimationFrame(tick)
+    }
+
+    animationRef.current = requestAnimationFrame(tick)
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
+      lastTimeRef.current = null
+    }
+  }, [normalizePosition])
 
   return (
     <SectionWrapper id="memes">
@@ -42,60 +72,55 @@ export function MemeGallery() {
       </div>
 
       <div className="relative">
-        {/* Navigation arrows */}
-        {canScrollLeft && (
-          <button
-            onClick={() => scroll("left")}
-            className="absolute left-0 top-1/2 z-10 -translate-y-1/2 rounded-full border border-border bg-card/90 p-2 text-muted-foreground backdrop-blur-sm transition-colors hover:text-foreground"
-            aria-label="Прокрутить влево"
-          >
-            <ChevronLeft size={20} />
-          </button>
-        )}
-        {canScrollRight && (
-          <button
-            onClick={() => scroll("right")}
-            className="absolute right-0 top-1/2 z-10 -translate-y-1/2 rounded-full border border-border bg-card/90 p-2 text-muted-foreground backdrop-blur-sm transition-colors hover:text-foreground"
-            aria-label="Прокрутить вправо"
-          >
-            <ChevronRight size={20} />
-          </button>
-        )}
-
-        {/* Carousel */}
         <div
-          ref={scrollRef}
-          onScroll={updateScrollState}
-          className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 scrollbar-hide"
+          ref={viewportRef}
+          className="overflow-x-auto pb-4 scrollbar-hide"
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          onMouseEnter={() => {
+            pausedRef.current = true
+          }}
+          onMouseLeave={() => {
+            pausedRef.current = false
+          }}
+          onPointerDown={() => {
+            pausedRef.current = true
+          }}
+          onPointerUp={() => {
+            pausedRef.current = false
+          }}
+          onPointerCancel={() => {
+            pausedRef.current = false
+          }}
         >
-          {memeData.memes.map((meme, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.05, duration: 0.5 }}
-              className="flex-shrink-0 snap-center"
-            >
-              <div className="group relative w-64 overflow-hidden rounded-lg border border-border md:w-80">
-                <div className="aspect-square">
-                  <AssetImage
-                    src={meme.src}
-                    alt={meme.caption}
-                    width={320}
-                    height={320}
-                    className="h-full w-full transition-transform duration-500 group-hover:scale-105"
-                  />
+          <div className="flex w-max gap-4 pr-4">
+            {loopedMemes.map((meme, i) => (
+              <motion.div
+                key={`${meme.src}-${i}`}
+                initial={{ opacity: 0, scale: 0.95 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: (i % memeData.memes.length) * 0.04, duration: 0.45 }}
+                className="flex-shrink-0"
+              >
+                <div className="group relative w-64 overflow-hidden rounded-lg border border-border md:w-80">
+                  <div className="aspect-square">
+                    <AssetImage
+                      src={meme.src}
+                      alt={meme.caption}
+                      width={320}
+                      height={320}
+                      className="h-full w-full transition-transform duration-500 group-hover:scale-105"
+                    />
+                  </div>
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background/90 to-transparent px-4 py-3">
+                    <p className="text-[11px] tracking-[0.18em] text-white/90 drop-shadow-md">
+                      {meme.caption}
+                    </p>
+                  </div>
                 </div>
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background/90 to-transparent px-4 py-3">
-                  <p className="text-[11px] tracking-[0.18em] text-white/90 drop-shadow-md">
-                    {meme.caption}
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            ))}
+          </div>
         </div>
       </div>
     </SectionWrapper>

@@ -11,6 +11,7 @@ interface AssetImageProps {
   height?: number
   className?: string
   priority?: boolean
+  fit?: "cover" | "contain"
 }
 
 export function AssetImage({
@@ -21,6 +22,7 @@ export function AssetImage({
   height,
   className = "",
   priority = false,
+  fit = "cover",
 }: AssetImageProps) {
   const [error, setError] = useState(false)
 
@@ -44,7 +46,7 @@ export function AssetImage({
         src={src}
         alt={alt}
         fill
-        className={`object-cover ${className}`}
+        className={`${fit === "contain" ? "object-contain" : "object-cover"} ${className}`}
         onError={() => setError(true)}
         priority={priority}
         sizes="100vw"
@@ -58,7 +60,7 @@ export function AssetImage({
       alt={alt}
       width={width ?? 400}
       height={height ?? 300}
-      className={`object-cover ${className}`}
+      className={`${fit === "contain" ? "object-contain" : "object-cover"} ${className}`}
       onError={() => setError(true)}
       priority={priority}
     />

@@ -39,7 +39,7 @@ function CardModal({ card, onClose }: CardModalProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.4 }}
-            className="relative max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-lg border border-border bg-card p-8"
+            className="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-border bg-card p-8 md:p-10"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -50,20 +50,22 @@ function CardModal({ card, onClose }: CardModalProps) {
               <X size={18} />
             </button>
 
-            <div className="mb-6 aspect-square w-full max-w-[200px] mx-auto overflow-hidden rounded-lg">
+            <div className="mb-8 aspect-square w-full max-w-[380px] mx-auto overflow-hidden rounded-lg border border-border/60">
               <AssetImage
                 src={card.image}
                 alt={card.title}
-                width={200}
-                height={200}
+                width={380}
+                height={380}
                 className="h-full w-full"
               />
             </div>
 
-            <h3 className="mb-2 font-serif text-2xl tracking-wide text-foreground">
+            <h3 className="mb-4 font-serif text-3xl tracking-wide text-foreground md:text-4xl">
               {card.title}
             </h3>
-            <p className="leading-relaxed text-sm text-muted-foreground">{card.longText}</p>
+            <p className="max-w-[65ch] leading-[1.8] text-base text-muted-foreground md:text-lg">
+              {card.longText}
+            </p>
           </motion.div>
         </motion.div>
       )}
@@ -87,7 +89,7 @@ export function WhoIsSection() {
         </h2>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
         {whoIsData.cards.map((card, i) => (
           <motion.button
             key={card.title}
@@ -96,23 +98,23 @@ export function WhoIsSection() {
             viewport={{ once: true }}
             transition={{ delay: i * 0.1, duration: 0.6 }}
             onClick={() => setSelected(card)}
-            className="group flex flex-col items-start gap-4 rounded-lg border border-border bg-card/50 p-6 text-left transition-all hover:border-foreground/20 hover:bg-card"
+            className="group flex min-h-[240px] flex-col items-start gap-6 rounded-xl border border-border bg-card/50 p-8 text-left transition-all hover:border-foreground/20 hover:bg-card"
             aria-label={`Подробнее о ${card.title}`}
           >
-            <div className="h-14 w-14 overflow-hidden rounded-full">
+            <div className="h-20 w-20 overflow-hidden rounded-full border border-border/60">
               <AssetImage
                 src={card.image}
                 alt={card.title}
-                width={56}
-                height={56}
+                width={80}
+                height={80}
                 className="h-full w-full"
               />
             </div>
             <div>
-              <h3 className="mb-1 text-sm font-medium tracking-wider uppercase text-foreground">
+              <h3 className="mb-2 text-base font-medium tracking-wider uppercase text-foreground">
                 {card.title}
               </h3>
-              <p className="text-xs leading-relaxed text-muted-foreground">
+              <p className="text-sm leading-relaxed text-muted-foreground">
                 {card.shortText}
               </p>
             </div>

@@ -1,49 +1,89 @@
-"use client"
+﻿"use client"
 
-import { useState, useRef, useCallback, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Volume2, VolumeX } from "lucide-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { AnimatePresence, motion } from "framer-motion"
+import { introData } from "@/lib/site-data"
 
 interface IntroOverlayProps {
-  onEnter: () => void
+  onEnter: (markAsSeen: boolean) => void
+  onStartAudio: (restart?: boolean) => Promise<void>
   visible: boolean
 }
 
-export function IntroOverlay({ onEnter, visible }: IntroOverlayProps) {
-  const [soundOn, setSoundOn] = useState(false)
+export function IntroOverlay({
+  onEnter,
+  onStartAudio,
+  visible,
+}: IntroOverlayProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
   const [videoError, setVideoError] = useState(false)
+  const [stepIndex, setStepIndex] = useState(0)
+  const [introStarted, setIntroStarted] = useState(false)
+
+  const sequence = useMemo(
+    () => [
+      {
+        title: introData.title,
+        subtitle: introData.subtitle,
+        durationMs: 4000,
+      },
+      ...introData.steps,
+    ],
+    []
+  )
+
+  const isFinalStep = stepIndex >= sequence.length - 1
 
   useEffect(() => {
-    if (visible && videoRef.current) {
-      videoRef.current.play().catch(() => {})
+    if (!visible) return
+
+    setStepIndex(0)
+    setVideoError(false)
+    setIntroStarted(false)
+
+    if (videoRef.current) {
+      videoRef.current.currentTime = 0
+      videoRef.current.play().catch(() => {
+        setVideoError(true)
+      })
     }
   }, [visible])
 
-  const toggleIntroSound = useCallback(() => {
-    if (!audioRef.current) {
-      const audio = new Audio("/sounds/intro.mp3")
-      audio.loop = true
-      audio.volume = 0.5
-      audioRef.current = audio
-    }
-    if (soundOn) {
-      audioRef.current.pause()
-    } else {
-      audioRef.current.play().catch(() => {})
-    }
-    setSoundOn(!soundOn)
-  }, [soundOn])
+  useEffect(() => {
+    if (!visible || !introStarted || isFinalStep) return
 
-  const handleEnter = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current.src = ""
-      audioRef.current = null
-    }
-    onEnter()
+    const timer = window.setTimeout(() => {
+      setStepIndex((prev) => Math.min(prev + 1, sequence.length - 1))
+    }, sequence[stepIndex].durationMs)
+
+    return () => window.clearTimeout(timer)
+  }, [visible, introStarted, isFinalStep, sequence, stepIndex])
+
+  useEffect(() => {
+    if (!visible || !videoRef.current || videoError) return
+    videoRef.current.play().catch(() => {
+      setVideoError(true)
+    })
+  }, [visible, stepIndex, videoError])
+
+  const handleSkip = useCallback(() => {
+    onEnter(false)
   }, [onEnter])
+
+  const handleStartIntro = useCallback(async () => {
+    await onStartAudio(false)
+    setIntroStarted(true)
+  }, [onStartAudio])
+
+  const handleEnter = useCallback(async () => {
+    if (!introStarted) {
+      await onStartAudio(true)
+      setIntroStarted(true)
+    }
+    onEnter(true)
+  }, [introStarted, onEnter, onStartAudio])
+
+  const progress = introStarted ? ((stepIndex + 1) / sequence.length) * 100 : 0
 
   return (
     <AnimatePresence>
@@ -52,78 +92,136 @@ export function IntroOverlay({ onEnter, visible }: IntroOverlayProps) {
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 1.2, ease: "easeInOut" }}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background"
+          className="fixed inset-0 z-50 flex flex-col bg-black"
         >
-          {/* Video background */}
           <div className="absolute inset-0 overflow-hidden">
             {!videoError ? (
-              <video
+              <motion.video
                 ref={videoRef}
                 src="/videos/intro.mp4"
                 muted
                 playsInline
                 loop
                 onError={() => setVideoError(true)}
+                animate={{ scale: 1.04 + stepIndex * 0.004 }}
+                transition={{ duration: 5.8, ease: "easeOut" }}
                 className="h-full w-full object-cover opacity-40"
               />
             ) : (
-              <div className="h-full w-full bg-gradient-to-b from-secondary to-background" />
+              <motion.div
+                animate={{ scale: 1.02 + stepIndex * 0.003 }}
+                transition={{ duration: 5.8, ease: "easeOut" }}
+                className="h-full w-full bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.12),transparent_45%),radial-gradient(circle_at_80%_10%,rgba(255,255,255,0.08),transparent_40%),linear-gradient(180deg,#0a0a0a_0%,#131313_45%,#050505_100%)]"
+              />
             )}
-            <div className="absolute inset-0 bg-background/60" />
+
+            <div className="absolute inset-0 bg-black/55" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_5%,rgba(0,0,0,0.5)_75%)]" />
+            <div className="absolute inset-0 opacity-15 [background-image:radial-gradient(rgba(255,255,255,0.08)_0.7px,transparent_0.7px)] [background-size:4px_4px]" />
           </div>
 
-          {/* Skip button */}
           <button
-            onClick={handleEnter}
-            className="absolute top-6 right-6 z-10 text-xs tracking-widest uppercase text-muted-foreground transition-colors hover:text-foreground"
-            aria-label="Пропустить интро"
+            onClick={handleSkip}
+            className="absolute top-6 right-6 z-20 text-[11px] tracking-[0.24em] uppercase text-white/70 transition-colors hover:text-white"
+            aria-label={introData.skipText}
           >
-            Пропустить
+            {introData.skipText}
           </button>
 
-          {/* Content */}
-          <div className="relative z-10 flex flex-col items-center gap-8">
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5, duration: 1 }}
-              className="font-serif text-4xl tracking-wider text-foreground md:text-6xl lg:text-7xl"
-            >
-              ЛЕГЕНДА
-            </motion.h1>
+          <div className="relative z-10 flex min-h-full flex-col items-center justify-center px-6 text-center">
+            <AnimatePresence mode="wait">
+              {!introStarted ? (
+                <motion.div
+                  key="intro-gate"
+                  initial={{ opacity: 0, y: 18 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+                  className="max-w-3xl"
+                >
+                  <h1 className="font-serif text-4xl leading-tight tracking-[0.08em] text-white md:text-6xl">
+                    {introData.title}
+                  </h1>
+                  <p className="mx-auto mt-8 max-w-2xl text-sm leading-loose tracking-[0.2em] text-white/78 md:text-base">
+                    {introData.subtitle}
+                  </p>
+                  <button
+                    onClick={handleStartIntro}
+                    className="mt-10 border border-white/70 px-8 py-3 text-[11px] tracking-[0.24em] uppercase text-white transition-all hover:bg-white hover:text-black"
+                    aria-label={introData.startText}
+                  >
+                    {introData.startText}
+                  </button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key={stepIndex}
+                  initial={{ opacity: 0, y: 20, scale: 0.985 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -12, scale: 1.01 }}
+                  transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
+                  className="max-w-4xl"
+                >
+                  <h1 className="font-serif text-4xl leading-tight tracking-[0.08em] text-white md:text-6xl lg:text-7xl">
+                    {sequence[stepIndex].title}
+                  </h1>
 
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.2, duration: 1 }}
-              className="text-sm tracking-[0.3em] uppercase text-muted-foreground"
-            >
-              Поздравление с днем рождения
-            </motion.p>
+                  {sequence[stepIndex].subtitle && (
+                    <p className="mx-auto mt-8 max-w-3xl text-sm leading-loose tracking-[0.2em] text-white/78 md:text-base">
+                      {sequence[stepIndex].subtitle}
+                    </p>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 2, duration: 0.8 }}
-              className="flex flex-col items-center gap-4 pt-8"
-            >
-              <button
-                onClick={toggleIntroSound}
-                className="flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-xs tracking-widest uppercase text-muted-foreground transition-all hover:border-foreground/30 hover:text-foreground"
-                aria-label={soundOn ? "Выключить звук" : "Включить звук"}
-              >
-                {soundOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
-                {soundOn ? "Звук включен" : "Включить звук"}
-              </button>
+            {!videoError && (
+              <p className="mt-10 text-[10px] tracking-[0.26em] uppercase text-white/35">
+                {introData.loadingVideoText}
+              </p>
+            )}
+            {videoError && (
+              <p className="mt-10 text-[10px] tracking-[0.26em] uppercase text-white/35">
+                {introData.fallbackTitle}
+              </p>
+            )}
+          </div>
 
-              <button
-                onClick={handleEnter}
-                className="group relative mt-4 overflow-hidden rounded-none border border-foreground/20 bg-transparent px-10 py-4 text-sm tracking-[0.25em] uppercase text-foreground transition-all hover:border-foreground hover:bg-foreground hover:text-background"
-                aria-label="Войти в историю"
-              >
-                Войти в историю
-              </button>
-            </motion.div>
+          <div className="relative z-10 border-t border-white/10 px-6 py-5">
+            <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="w-full md:max-w-sm">
+                <div className="h-[1px] w-full bg-white/15">
+                  <motion.div
+                    className="h-[1px] bg-white"
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                  />
+                </div>
+                <p className="mt-2 text-[10px] tracking-[0.24em] uppercase text-white/55">
+                  {introStarted
+                    ? `Шаг ${Math.min(stepIndex + 1, sequence.length)} из ${sequence.length}`
+                    : "Ожидание старта"}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-3">
+                {introStarted && (
+                  <span className="text-[10px] tracking-[0.24em] uppercase text-white/45">
+                    Звук включен
+                  </span>
+                )}
+
+                {introStarted && isFinalStep && (
+                  <button
+                    onClick={handleEnter}
+                    className="border border-white px-7 py-2.5 text-[11px] tracking-[0.24em] uppercase text-white transition-all hover:bg-white hover:text-black"
+                    aria-label={introData.enterText}
+                  >
+                    {introData.enterText}
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </motion.div>
       )}

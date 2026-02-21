@@ -14,7 +14,7 @@ import { FinaleSection } from "@/components/finale-section"
 import { useAudio } from "@/hooks/use-audio"
 import { siteConfig } from "@/lib/site-data"
 
-const INTRO_SEEN_KEY = "legend-intro-seen"
+const INTRO_SEEN_KEY = "introSeen"
 
 export default function Home() {
   const [showIntro, setShowIntro] = useState(true)
@@ -40,11 +40,13 @@ export default function Home() {
     }
   }, [])
 
-  const handleEnterSite = useCallback(() => {
+  const handleEnterSite = useCallback((markAsSeen: boolean) => {
     setShowIntro(false)
     setSiteVisible(true)
     try {
-      localStorage.setItem(INTRO_SEEN_KEY, "true")
+      if (markAsSeen) {
+        localStorage.setItem(INTRO_SEEN_KEY, "true")
+      }
     } catch {
       // ignore
     }
@@ -56,10 +58,11 @@ export default function Home() {
     } catch {
       // ignore
     }
+    audio.stopAudio(true)
     setSiteVisible(false)
     window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior })
     setTimeout(() => setShowIntro(true), 100)
-  }, [])
+  }, [audio.stopAudio])
 
   const handleLogoClick = useCallback(() => {
     logoClickCount.current += 1
@@ -81,7 +84,11 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-background">
       {/* Intro overlay */}
-      <IntroOverlay visible={showIntro} onEnter={handleEnterSite} />
+      <IntroOverlay
+        visible={showIntro}
+        onEnter={handleEnterSite}
+        onStartAudio={audio.startIntroAudio}
+      />
 
       {/* Main site */}
       {siteVisible && (
