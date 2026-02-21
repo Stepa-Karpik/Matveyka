@@ -193,8 +193,8 @@ export const multiverseData = {
       aiImage: "/images/multi_ai5.png",
     },
     {
-      title: "С подругой",
-      caption: "Слева Матвей, справа версия мира на минималках.",
+      title: "Лучший в своем деле",
+      caption: "Никогда не знаешь, что реально, кроме тебя самого.",
       realImage: "/images/multi_real6.jpg",
       aiImage: "/images/multi_ai6.jpg",
     },
