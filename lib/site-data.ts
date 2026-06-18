@@ -146,7 +146,7 @@ export const memeData = {
     { src: "/images/meme1.jpg", caption: "Тот самый случай..." },
     { src: "/images/meme2.jpg", caption: "Без контекста все ясно" },
     { src: "/images/meme3.jpg", caption: "Проверенная классика" },
-    { src: "/images/meme4.jpg", caption: "Пик формы" },
+    { src: "/images/meme4.jpg", caption: "Туз пики" },
     { src: "/images/meme5.jpg", caption: "Аура вне конкуренции" },
     { src: "/images/meme6.jpg", caption: "Энергия главного героя" },
     { src: "/images/meme7.jpg", caption: "Лицо победы" },
