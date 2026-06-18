@@ -82,7 +82,7 @@ export const introData = {
 }
 
 export const heroData = {
-  title: "Красавчик",
+  title: "Шалпек",
   subtitle: "сделан иначе.",
   secondarySubtitle: "не идеален. легендарен.",
   backgroundImage: "/images/hero1.jpg",
